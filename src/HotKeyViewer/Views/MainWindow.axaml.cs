@@ -67,21 +67,6 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 return;
 
-            case Key.Enter when ViewModel?.SelectedRow is HotKeyGroup group:
-                ViewModel.ToggleGroup(group);
-                e.Handled = true;
-                return;
-
-            case Key.Enter when ViewModel?.SelectedHotKey is { HasSource: true } source:
-                OpenSource(source);
-                e.Handled = true;
-                return;
-
-            case Key.Delete when ViewModel?.SelectedHotKey is { } target:
-                RequestRemoval(target);
-                e.Handled = true;
-                return;
-
             case Key.E when e.KeyModifiers.HasFlag(KeyModifiers.Control):
                 // Collapse everything only once nothing is left to open, so the
                 // one shortcut reads as "show me less" then "show me more".
@@ -111,6 +96,7 @@ public partial class MainWindow : Window
     {
         if (ViewModel?.PendingRemoval is not { } pending)
         {
+            OnPreviewRowKey(e);
             return;
         }
 
@@ -127,6 +113,38 @@ public partial class MainWindow : Window
         }
 
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// Row actions, handled on the tunnelling pass because ListBox treats Enter
+    /// as item activation and consumes it before it can reach the window. They
+    /// are skipped while the search box has focus, where these keys belong to
+    /// the text box.
+    /// </summary>
+    private void OnPreviewRowKey(KeyEventArgs e)
+    {
+        if (SearchBox.IsFocused || ViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Enter or Key.Return when viewModel.SelectedRow is HotKeyGroup group:
+                viewModel.ToggleGroup(group);
+                e.Handled = true;
+                return;
+
+            case Key.Enter or Key.Return when viewModel.SelectedHotKey is { HasSource: true } source:
+                OpenSource(source);
+                e.Handled = true;
+                return;
+
+            case Key.Delete when viewModel.SelectedHotKey is { } target:
+                RequestRemoval(target);
+                e.Handled = true;
+                return;
+        }
     }
 
     /// <summary>Hands focus to the results, selecting the first row if nothing is.</summary>
