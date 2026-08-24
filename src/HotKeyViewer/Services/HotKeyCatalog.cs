@@ -18,6 +18,12 @@ public sealed record HotKeyCatalog(
     /// </summary>
     public bool HasDefaultsLayer { get; init; }
 
+    /// <summary>Where the user's own config lives, and so where overrides go.</summary>
+    public string ConfigDirectory { get; init; } = string.Empty;
+
+    /// <summary>Whether that config is Lua rather than hyprlang, which decides override syntax.</summary>
+    public bool IsLuaConfig { get; init; }
+
     public static readonly HotKeyCatalog Empty = new([], [], []);
 }
 
@@ -80,6 +86,8 @@ public static class HotKeyCatalogBuilder
         return new HotKeyCatalog(hotKeys, config.FilesScanned, warnings)
         {
             HasDefaultsLayer = hotKeys.Any(k => k.Origin == BindOrigin.Default),
+            ConfigDirectory = configDirectory,
+            IsLuaConfig = LuaConfigScanner.CandidateEntryPoints(configDirectory).Any(File.Exists),
         };
     }
 
@@ -112,6 +120,13 @@ public static class HotKeyCatalogBuilder
 
         // A chord can legitimately carry several bindings (Hyprland runs them
         // all), so matches are consumed from a queue rather than looked up once.
+        // How many bindings each config line produces, which is what separates a
+        // deletable single definition from a loop that makes ten.
+        var bindsPerLine = declarations
+            .Where(b => !string.IsNullOrEmpty(b.SourceFile))
+            .GroupBy(b => $"{b.SourceFile}:{b.SourceLine}", StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
         var byChordAndDescription = BuildIndex(declarations, b => $"{b.Chord.MatchKey}|{b.Description.ToUpperInvariant()}");
         var byChord = BuildIndex(declarations, b => b.Chord.MatchKey);
 
@@ -171,6 +186,10 @@ public static class HotKeyCatalogBuilder
             hotKeys.Add(new HotKey
             {
                 Chord = chord,
+                RawChord = bind.Chord,
+                DefinitionShareCount = declaration is null
+                    ? 1
+                    : bindsPerLine.GetValueOrDefault($"{declaration.SourceFile}:{declaration.SourceLine}", 1),
                 Description = description,
                 Command = command,
                 Dispatcher = bind.Dispatcher,
@@ -185,6 +204,8 @@ public static class HotKeyCatalogBuilder
             });
         }
 
+        MarkDuplicates(hotKeys);
+
         // Report chords the user replaced so the count in the UI is explainable.
         var replaced = chordsFromUser.Intersect(chordsFromDefaults, StringComparer.Ordinal).Count();
         if (replaced > 0)
@@ -194,6 +215,41 @@ public static class HotKeyCatalogBuilder
 
         return hotKeys;
     }
+
+    /// <summary>
+    /// Flags bindings that run the same command as another, so the same action
+    /// bound to two chords is visible rather than something you have to notice.
+    /// </summary>
+    private static void MarkDuplicates(List<HotKey> hotKeys)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var hotKey in hotKeys)
+        {
+            if (IsIdentifying(hotKey.Command))
+            {
+                counts[hotKey.Command] = counts.GetValueOrDefault(hotKey.Command) + 1;
+            }
+        }
+
+        for (var index = 0; index < hotKeys.Count; index++)
+        {
+            if (IsIdentifying(hotKeys[index].Command) &&
+                counts.TryGetValue(hotKeys[index].Command, out var count) &&
+                count > 1)
+            {
+                hotKeys[index] = hotKeys[index] with { DuplicateCount = count };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether a command actually identifies what a binding does. A Lua closure
+    /// has no recoverable text, so every one of them renders identically —
+    /// grouping on that would call six unrelated bindings duplicates.
+    /// </summary>
+    private static bool IsIdentifying(string command) =>
+        !string.IsNullOrWhiteSpace(command) && command != "<lua function>";
 
     private static Dictionary<string, Queue<ConfigBind>> BuildIndex(
         IEnumerable<ConfigBind> binds,

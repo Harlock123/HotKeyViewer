@@ -20,6 +20,8 @@
     <x:Double x:Key="SourceColumnWidth">140</x:Double>
     <x:Double x:Key="ChevronSize">9</x:Double>
     <GridLength x:Key="KeycapColumn">280</GridLength>
+    <SolidColorBrush x:Key="DangerBrush">#8B2F3A</SolidColorBrush>
+    <SolidColorBrush x:Key="SelectionBrush">#2F3D5A</SolidColorBrush>
 
     <!-- Colours are published at startup by ThemeResources, from the active
          Omarchy theme, and republished whenever the theme changes. They are
@@ -59,6 +61,94 @@
     <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Padding" Value="6,1" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.chipButton">
+    <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.chipButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+  </Style>
+
+  <!-- Destructive action, coloured from the palette's red rather than a fixed one. -->
+  <Style Selector="Button.chipButton.danger /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerBrush}" />
+  </Style>
+
+  <Style Selector="Button.chipButton.danger">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- Selected row, so keyboard navigation is visible. -->
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectionBrush}" />
+  </Style>
+
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+
+  <!-- The source label doubles as the "open this in my editor" affordance. -->
+  <Style Selector="Button.sourceLink">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
+  </Style>
+
+  <Style Selector="Button.sourceLink:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.sourceLink:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox.chipToggle">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeChip}" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="chipBorder"
+                Background="{DynamicResource ChipBrush}"
+                CornerRadius="6"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            Foreground="{TemplateBinding Foreground}"
+                            FontSize="{TemplateBinding FontSize}"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="CheckBox.chipToggle:checked /template/ Border#chipBorder">
+    <Setter Property="Background" Value="{DynamicResource ChipCheckedBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox.chipToggle:pointerover /template/ Border#chipBorder">
+    <Setter Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox.chipToggle:checked">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
 
   <Style Selector="Button.groupToggle">

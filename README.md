@@ -10,6 +10,15 @@ Each row shows the chord as keycaps, what it does, the command it runs, and the
 config file and line number it came from. Bindings you defined yourself are
 tagged `YOURS`; ones that replace a default are tagged `REMAPPED`.
 
+It also does a little more than look:
+
+- an action bound to more than one chord is badged, so
+  [duplicates](#duplicates) are visible rather than something you have to notice
+- `Delete` [removes a binding](#removing-a-binding), choosing an approach that
+  survives distribution updates and never breaks a loop that defines ten
+- clicking a source [opens that file in your editor](#jumping-to-the-definition),
+  on the line that defines the binding
+
 Click any heading to collapse that section, or `Ctrl+E` to collapse them all
 into an overview:
 
@@ -123,10 +132,16 @@ MODE=single-file ./packaging/install.sh
 | --- | --- |
 | `SUPER+SHIFT+K` | open the window, or close it if it is already open |
 | any character | jump to the search box and start filtering |
+| `Delete` | remove the selected binding, after confirmation |
+| click a source | open that config file in your editor, on the defining line |
 | click a heading | collapse or expand that section |
 | `Ctrl+E` | collapse every section, or reopen them all |
 | `Esc` | clear the search, or close the window if the search is empty |
 | `Ctrl+R` | re-read the compositor and the config files |
+
+Typing filters; `Down` moves out of the search box and into the results, after
+which the arrow keys walk headings and bindings alike. `Enter` toggles a heading
+or opens a binding's source.
 
 Search matches the chord, the action, the command, and the source file name, and
 every term has to match — `super work` narrows to workspace bindings on SUPER.
@@ -135,6 +150,72 @@ The `All` / `Yours` / `Defaults` chips filter by who defined the binding.
 Sections start expanded and remember what you collapse, including across
 filtering and searching. While a search is running every section is forced open,
 so a match can never hide inside a collapsed one and read as "no results".
+
+### Duplicates
+
+An action reachable by more than one chord is badged `N KEYS`, and the
+**Duplicates** chip narrows the list to just those — useful for spotting that,
+say, `Browser` sits on both `SUPER+SHIFT+B` and `SUPER+SHIFT+RETURN`.
+
+![Two Browser bindings badged 2 KEYS, with the private-window one unbadged](docs/screenshot-duplicates.png)
+
+Note the third row: `Browser (private)` runs the same binary with a different
+flag, so it is a separate action and is deliberately not badged.
+
+Bindings are matched on their **command**, not their description, so
+`omarchy-launch-browser --private` is correctly a different action rather than a
+third copy of the browser. Lua closures are excluded: they all render as
+`<lua function>` because there is no recoverable text, and grouping on that would
+call every unrelated closure a duplicate of the others.
+
+Being badged is not a defect — some duplicates are deliberate, like play and
+pause both reaching `playPause`. It is a prompt to look, not a cleanup list.
+
+### Removing a binding
+
+Select a binding and press `Delete`. Nothing is written until you have seen the
+exact edit and confirmed it, a timestamped backup is taken first, and the change
+is rolled back automatically if Hyprland rejects the resulting config.
+
+![The removal prompt, showing the exact override that will be appended](docs/screenshot-remove.png)
+
+Deleting the definition is almost never the right move, so the tool picks an
+approach per binding:
+
+| Defined in | That line defines | What happens |
+| --- | --- | --- |
+| your own config | exactly 1 binding | the definition is commented out |
+| your own config | more than 1 (a loop) | an `unbind` override is appended |
+| your distribution | anything | an `unbind` override is appended |
+
+The two override cases exist because editing the definition would be wrong.
+Most bindings live under `/usr/share/omarchy/`, where an edit is reverted by the
+next update. And many come from loops: one line of Omarchy's `tiling.lua` makes
+ten workspace bindings, so removing that line would take out all ten. An
+override works per chord and is immune to both — which is also why the app
+records the number of bindings each config line produces.
+
+The override names the **raw** chord, not the one on screen: a keycode binding
+shown as `SUPER + 1` is written as `hl.unbind("SUPER + code:10")`, because the
+displayed symbol would not match.
+
+### Jumping to the definition
+
+Clicking a row's source label (`bindings.lua:90`) opens that file in your editor
+at that line. The editor comes from Omarchy's recorded default
+(`~/.local/state/omarchy/defaults/editor`), then `$VISUAL`, then `$EDITOR`,
+then `nvim`. Note that `$EDITOR` is itself `omarchy-launch-editor` on Omarchy, so
+it is deliberately skipped rather than being asked to edit files with itself.
+
+Since no two editors agree on how to open at a line, the argument is built per
+editor — `-g file:line` for VS Code, `+line file` for vim and nano, `file:line`
+for Zed and Helix, `--line N file` for JetBrains — falling back to just the file
+for an editor that is not recognised. The launch is delegated to
+`omarchy-launch-editor` when present, since it already knows whether the chosen
+editor needs a terminal around it.
+
+Source labels under `/usr/share/omarchy/` say so on hover: they open fine, but
+edits there are overwritten by the next `omarchy update`.
 
 ### Bind it to a key
 
@@ -283,6 +364,8 @@ src/HotKeyViewer/
     OmarchyTheme.cs          reads colors.toml and watches for theme switches
     ThemeResources.cs        maps the palette onto the UI's brushes
     SingleInstance.cs        the --toggle check
+    EditorLauncher.cs        opens a config file at a line
+    BindingRemover.cs        plans and applies a removal, with rollback
   ViewModels/ Views/         the window
 tests/HotKeyViewer.Tests/    parser, merge and filter tests
 packaging/

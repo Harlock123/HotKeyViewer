@@ -15,10 +15,11 @@
           BorderBrush="{DynamicResource SurfaceBorderBrush}"
           BorderThickness="1"
           CornerRadius="12">
+   <Panel>
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18,14,18,12">
 
       <!-- Header -->
-      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
         <StackPanel Grid.Column="0" Spacing="2">
           <TextBlock Text="Hyprland Hotkeys"
                      FontSize="{DynamicResource FontSizeTitle}" FontWeight="Bold"
@@ -40,6 +41,11 @@
                        IsChecked="{Binding IsShowingDefaults, Mode=OneWay}"
                        Click="OnFilterDefaults" />
         </StackPanel>
+
+        <CheckBox Grid.Column="2" Classes="chipToggle" Content="Duplicates"
+                  Margin="6,0,0,0" VerticalAlignment="Center"
+                  IsVisible="{Binding HasDuplicates}"
+                  IsChecked="{Binding DuplicatesOnly, Mode=TwoWay}" />
       </Grid>
 
       <!-- Search -->
@@ -61,94 +67,106 @@
                    Foreground="{DynamicResource TextMutedBrush}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" />
 
-        <ScrollViewer IsVisible="{Binding IsReady}" HorizontalScrollBarVisibility="Disabled">
-          <ItemsControl ItemsSource="{Binding Groups}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:HotKeyGroup">
-                <StackPanel Margin="0,0,0,16">
+        <!-- One flat list of headings and rows, templated by type, so arrow
+             keys walk the whole window and there is a single selection. -->
+        <ListBox Name="RowList"
+                 IsVisible="{Binding IsReady}"
+                 ItemsSource="{Binding Rows}"
+                 SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
-                  <Button Classes="groupToggle" Click="OnToggleGroup" Margin="0,0,0,4">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <!-- Two glyphs rather than one rotated by a converter. -->
-                      <Path Classes="chevron"
-                            Data="M 0,0 L 8,0 L 4,5 Z"
-                            Width="{DynamicResource ChevronSize}"
-                            Height="{DynamicResource ChevronSize}"
-                            IsVisible="{Binding IsExpanded}" />
-                      <Path Classes="chevron"
-                            Data="M 0,0 L 5,4 L 0,8 Z"
-                            Width="{DynamicResource ChevronSize}"
-                            Height="{DynamicResource ChevronSize}"
-                            IsVisible="{Binding IsCollapsed}" />
-                      <TextBlock Classes="groupHeader" Text="{Binding Name}" VerticalAlignment="Center" />
-                      <TextBlock Classes="muted" Text="{Binding CountLabel}" VerticalAlignment="Center" />
-                    </StackPanel>
-                  </Button>
+          <ListBox.DataTemplates>
 
-                  <ItemsControl ItemsSource="{Binding HotKeys}" IsVisible="{Binding IsExpanded}">
+            <DataTemplate DataType="vm:HotKeyGroup">
+              <Button Classes="groupToggle" Click="OnToggleGroup" Margin="0,8,0,2">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <!-- Two glyphs rather than one rotated by a converter. -->
+                  <Path Classes="chevron"
+                        Data="M 0,0 L 8,0 L 4,5 Z"
+                        Width="{DynamicResource ChevronSize}"
+                        Height="{DynamicResource ChevronSize}"
+                        IsVisible="{Binding IsExpanded}" />
+                  <Path Classes="chevron"
+                        Data="M 0,0 L 5,4 L 0,8 Z"
+                        Width="{DynamicResource ChevronSize}"
+                        Height="{DynamicResource ChevronSize}"
+                        IsVisible="{Binding IsCollapsed}" />
+                  <TextBlock Classes="groupHeader" Text="{Binding Name}" VerticalAlignment="Center" />
+                  <TextBlock Classes="muted" Text="{Binding CountLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+
+            <DataTemplate DataType="models:HotKey">
+              <Border Classes="row">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+
+                  <!-- Keycaps -->
+                  <ItemsControl Grid.Column="0" ItemsSource="{Binding Chord.Parts}"
+                                Width="{DynamicResource KeycapColumnWidth}"
+                                VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="models:HotKey">
-                        <Border Classes="row">
-                          <Grid ColumnDefinitions="Auto,*,Auto">
-
-                            <!-- Keycaps -->
-                            <ItemsControl Grid.Column="0" ItemsSource="{Binding Chord.Parts}"
-                                          Width="{DynamicResource KeycapColumnWidth}"
-                                          VerticalAlignment="Center">
-                              <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                  <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                              </ItemsControl.ItemsPanel>
-                              <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                  <Border Classes="keycap" Margin="0,1,4,1">
-                                    <TextBlock Text="{Binding}" />
-                                  </Border>
-                                </DataTemplate>
-                              </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <!-- Action and command -->
-                            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
-                              <TextBlock Text="{Binding Description}"
-                                         FontSize="{DynamicResource FontSizeBody}"
-                                         Foreground="{DynamicResource TextPrimaryBrush}"
-                                         TextTrimming="CharacterEllipsis" />
-                              <TextBlock Text="{Binding Command}"
-                                         IsVisible="{Binding HasCommand}"
-                                         Classes="muted"
-                                         FontFamily="{StaticResource MonospaceFont}"
-                                         TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-
-                            <!-- Provenance -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
-                                        VerticalAlignment="Center">
-                              <Border Classes="badge" IsVisible="{Binding HasBadge}"
-                                      Background="{DynamicResource BadgeBrush}">
-                                <TextBlock Text="{Binding BadgeText}"
-                                           FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
-                                           Foreground="{DynamicResource CustomBrush}" />
-                              </Border>
-                              <TextBlock Text="{Binding SourceLabel}"
-                                         IsVisible="{Binding HasSource}"
-                                         Classes="muted"
-                                         MinWidth="{DynamicResource SourceColumnWidth}"
-                                         TextAlignment="Right" />
-                            </StackPanel>
-
-                          </Grid>
+                      <DataTemplate x:DataType="x:String">
+                        <Border Classes="keycap" Margin="0,1,4,1">
+                          <TextBlock Text="{Binding}" />
                         </Border>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
 
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+                  <!-- Action and command -->
+                  <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Description}"
+                               FontSize="{DynamicResource FontSizeBody}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Command}"
+                               IsVisible="{Binding HasCommand}"
+                               Classes="muted"
+                               FontFamily="{StaticResource MonospaceFont}"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+
+                  <!-- Provenance -->
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                              VerticalAlignment="Center">
+                    <Border Classes="badge" IsVisible="{Binding HasDuplicates}"
+                            Background="{DynamicResource BadgeBrush}"
+                            ToolTip.Tip="Another chord runs this same command">
+                      <TextBlock Text="{Binding DuplicateLabel}"
+                                 FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                 Foreground="{DynamicResource RemapBrush}" />
+                    </Border>
+                    <Border Classes="badge" IsVisible="{Binding HasBadge}"
+                            Background="{DynamicResource BadgeBrush}">
+                      <TextBlock Text="{Binding BadgeText}"
+                                 FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                 Foreground="{DynamicResource CustomBrush}" />
+                    </Border>
+                    <Button Classes="sourceLink"
+                            IsVisible="{Binding HasSource}"
+                            Click="OnOpenSource"
+                            ToolTip.Tip="{Binding SourceTooltip}"
+                            MinWidth="{DynamicResource SourceColumnWidth}">
+                      <TextBlock Text="{Binding SourceLabel}"
+                                 FontSize="{DynamicResource FontSizeSmall}"
+                                 TextAlignment="Right" />
+                    </Button>
+                  </StackPanel>
+
+                </Grid>
+              </Border>
+            </DataTemplate>
+
+          </ListBox.DataTemplates>
+        </ListBox>
       </Panel>
 
       <!-- Footer -->
@@ -158,9 +176,70 @@
                    IsVisible="{Binding HasWarning}"
                    TextTrimming="CharacterEllipsis" />
         <TextBlock Grid.Column="1" Classes="muted"
-                   Text="Type to search  ·  Click a heading to collapse  ·  Ctrl+E all  ·  Esc to close  ·  Ctrl+R reload" />
+                   Text="↑↓ select  ·  Enter opens the source  ·  Delete removes  ·  Ctrl+E all  ·  Esc to close" />
       </Grid>
 
     </Grid>
+
+    <!-- Confirmation overlay. Inside the main window on purpose: a separate
+         toplevel opens without keyboard focus under Wayland. -->
+    <Border IsVisible="{Binding HasPendingRemoval}"
+            Background="#B0000000"
+            CornerRadius="12">
+      <Border Background="{DynamicResource SurfaceBrush}"
+              BorderBrush="{DynamicResource SurfaceBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="12"
+              Margin="40"
+              Padding="24"
+              MaxWidth="760"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center">
+        <ContentControl Content="{Binding PendingRemoval}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:RemovalRequest">
+              <StackPanel Spacing="14">
+
+          <TextBlock Text="{Binding Heading}"
+                     FontSize="{DynamicResource FontSizeTitle}" FontWeight="Bold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextWrapping="Wrap" />
+
+          <TextBlock Text="{Binding Explanation}"
+                     FontSize="{DynamicResource FontSizeBody}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+
+          <!-- The exact edit, so nothing is written that was not shown first. -->
+          <Border Background="{DynamicResource KeycapBrush}"
+                  BorderBrush="{DynamicResource KeycapBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="12,10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding Target}" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Preview}"
+                         FontFamily="{StaticResource MonospaceFont}"
+                         FontSize="{DynamicResource FontSizeSmall}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="A timestamped backup is written first, and the change is rolled back automatically if Hyprland rejects the config." />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Classes="chipButton" Content="Cancel  (Esc)" Click="OnCancelRemoval" />
+            <Button Classes="chipButton danger" Content="Remove  (Enter)" Click="OnConfirmRemoval" />
+          </StackPanel>
+
+        </StackPanel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+      </Border>
+    </Border>
+   </Panel>
   </Border>
 </Window>

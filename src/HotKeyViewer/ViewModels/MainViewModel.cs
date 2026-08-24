@@ -33,6 +33,35 @@ public sealed class MainViewModel : ViewModelBase
 
     public ObservableCollection<HotKeyGroup> Groups { get; } = [];
 
+    /// <summary>
+    /// Headers and rows in one flat list. A single ListBox over this is what
+    /// makes arrow keys walk the whole window; nested lists would each own a
+    /// separate selection.
+    /// </summary>
+    public ObservableCollection<object> Rows { get; } = [];
+
+    private object? _selectedRow;
+
+    public object? SelectedRow
+    {
+        get => _selectedRow;
+        set
+        {
+            if (SetProperty(ref _selectedRow, value))
+            {
+                RaisePropertyChanged(nameof(SelectedHotKey));
+            }
+        }
+    }
+
+    /// <summary>The selected row when it is a binding rather than a heading.</summary>
+    public HotKey? SelectedHotKey => SelectedRow as HotKey;
+
+    /// <summary>Where overrides are written, captured from the last load.</summary>
+    public string ConfigDirectory { get; private set; } = string.Empty;
+
+    public bool IsLuaConfig { get; private set; }
+
     public string Query
     {
         get => _query;
@@ -99,6 +128,50 @@ public sealed class MainViewModel : ViewModelBase
 
     public bool HasWarning => !string.IsNullOrEmpty(WarningText);
 
+    private RemovalRequest? _pendingRemoval;
+
+    /// <summary>The removal waiting on the user's confirmation, if any.</summary>
+    public RemovalRequest? PendingRemoval
+    {
+        get => _pendingRemoval;
+        set
+        {
+            if (SetProperty(ref _pendingRemoval, value))
+            {
+                RaisePropertyChanged(nameof(HasPendingRemoval));
+            }
+        }
+    }
+
+    public bool HasPendingRemoval => PendingRemoval is not null;
+
+    /// <summary>
+    /// Shows the result of an edit in the footer. Cleared by the next load, so a
+    /// stale outcome never lingers next to refreshed data.
+    /// </summary>
+    public void ReportStatus(string message) => WarningText = message;
+
+    private bool _duplicatesOnly;
+
+    /// <summary>
+    /// Narrows the list to actions reachable by more than one chord. A separate
+    /// axis from the origin chips, so the two combine.
+    /// </summary>
+    public bool DuplicatesOnly
+    {
+        get => _duplicatesOnly;
+        set
+        {
+            if (SetProperty(ref _duplicatesOnly, value))
+            {
+                ApplyFilter();
+            }
+        }
+    }
+
+    /// <summary>Hidden when nothing is duplicated, so the toggle never dead-ends.</summary>
+    public bool HasDuplicates => _allHotKeys.Any(k => k.HasDuplicates);
+
     private bool _showsOriginFilter = true;
 
     /// <summary>
@@ -143,7 +216,17 @@ public sealed class MainViewModel : ViewModelBase
     {
         _allHotKeys = catalog.HotKeys;
 
+        ConfigDirectory = catalog.ConfigDirectory;
+        IsLuaConfig = catalog.IsLuaConfig;
+
         ShowsOriginFilter = catalog.HasDefaultsLayer;
+        RaisePropertyChanged(nameof(HasDuplicates));
+
+        if (!HasDuplicates)
+        {
+            DuplicatesOnly = false;
+        }
+
         if (!ShowsOriginFilter)
         {
             Filter = FilterMode.All;
@@ -172,6 +255,7 @@ public sealed class MainViewModel : ViewModelBase
 
         var matches = _allHotKeys.Where(hotKey =>
             MatchesFilter(hotKey) &&
+            (!DuplicatesOnly || hotKey.HasDuplicates) &&
             // Every term must appear somewhere, so "super work" narrows rather
             // than widens.
             terms.All(term => hotKey.SearchText.Contains(term, StringComparison.Ordinal)));
@@ -197,7 +281,35 @@ public sealed class MainViewModel : ViewModelBase
             Groups.Add(group);
         }
 
+        RebuildRows();
         HasNoResults = Groups.Count == 0 && !IsLoading;
+    }
+
+    /// <summary>Flattens the groups, skipping the contents of collapsed ones.</summary>
+    private void RebuildRows()
+    {
+        // Selection is restored by identity afterwards, so collapsing a section
+        // does not silently move the cursor somewhere else.
+        var selected = SelectedRow;
+
+        Rows.Clear();
+
+        foreach (var group in Groups)
+        {
+            Rows.Add(group);
+
+            if (!group.IsExpanded)
+            {
+                continue;
+            }
+
+            foreach (var hotKey in group.HotKeys)
+            {
+                Rows.Add(hotKey);
+            }
+        }
+
+        SelectedRow = selected is not null && Rows.Contains(selected) ? selected : null;
     }
 
     /// <summary>Opens or closes one section, remembering the choice.</summary>
@@ -213,6 +325,8 @@ public sealed class MainViewModel : ViewModelBase
         {
             _collapsed.Add(group.Name);
         }
+
+        RebuildRows();
     }
 
     /// <summary>Opens or closes every section at once.</summary>
@@ -232,6 +346,8 @@ public sealed class MainViewModel : ViewModelBase
         {
             group.IsExpanded = expanded;
         }
+
+        RebuildRows();
     }
 
     private bool MatchesFilter(HotKey hotKey) => Filter switch

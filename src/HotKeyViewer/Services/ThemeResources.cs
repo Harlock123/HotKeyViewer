@@ -49,6 +49,11 @@ public static class ThemeResources
         Set("CustomBrush", palette.AnsiOr(2, palette.Accent));
         Set("RemapBrush", palette.AnsiOr(3, palette.Accent));
 
+        // Destructive actions take the palette's red; selection takes the accent
+        // muted into the background so it reads under text in both variants.
+        Set("DangerBrush", ThemePalette.Lerp(palette.Background, palette.AnsiOr(1, palette.Accent), 0.75));
+        Set("SelectionBrush", ThemePalette.Lerp(palette.Background, palette.Accent, 0.28));
+
         // Fluent's own controls (scrollbars, the text box) follow the variant,
         // so a light theme must not leave dark chrome behind.
         application.RequestedThemeVariant = palette.IsLight ? ThemeVariant.Light : ThemeVariant.Dark;

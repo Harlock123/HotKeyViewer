@@ -78,6 +78,41 @@ public sealed record HotKey
     public bool HasCommand => !string.IsNullOrWhiteSpace(Command)
         && !Command.Equals(Description, StringComparison.Ordinal);
 
+    /// <summary>
+    /// The chord as the config spells it, before keycodes are resolved to the
+    /// symbols they print. An unbind has to name "SUPER + code:10", not the
+    /// "SUPER + 1" shown on screen, or it will not match.
+    /// </summary>
+    public required KeyChord RawChord { get; init; }
+
+    /// <summary>
+    /// How many bindings the defining line produces. Greater than one means it
+    /// is a loop — Omarchy's `for workspace = 1, 10` makes ten bindings from one
+    /// line — so that line can never be deleted to remove just this binding.
+    /// </summary>
+    public int DefinitionShareCount { get; init; } = 1;
+
+    /// <summary>
+    /// How many chords run this same command, counting this one. Greater than
+    /// one means the same action is reachable more than one way.
+    /// </summary>
+    public int DuplicateCount { get; init; } = 1;
+
+    public bool HasDuplicates => DuplicateCount > 1;
+
+    public string DuplicateLabel => $"{DuplicateCount} KEYS";
+
+    /// <summary>
+    /// True when the defining file belongs to the distribution, where edits are
+    /// overwritten by the next update.
+    /// </summary>
+    public bool IsReadOnlySource => Origin == BindOrigin.Default;
+
+    /// <summary>Hover text for the source link, since the label is only a name.</summary>
+    public string SourceTooltip => IsReadOnlySource
+        ? $"{SourceFile}:{SourceLine}\nProvided by your distribution — edits here are overwritten on update."
+        : $"{SourceFile}:{SourceLine}";
+
     /// <summary>Tag shown next to bindings the user is responsible for.</summary>
     public string BadgeText => IsOverride
         ? "REMAPPED"

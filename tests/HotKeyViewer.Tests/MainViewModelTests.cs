@@ -14,6 +14,7 @@ public class MainViewModelTests
         return new HotKey
         {
             Chord = parsed,
+            RawChord = parsed,
             Description = description,
             Command = command,
             Origin = origin,
@@ -208,6 +209,101 @@ public class MainViewModelTests
         // And the reopened state has to survive a rebuild, not just the moment.
         viewModel.Filter = FilterMode.All;
         Assert.All(viewModel.Groups, group => Assert.True(group.IsExpanded));
+    }
+
+    [Fact]
+    public void DuplicatesOnlyNarrowsToActionsWithMoreThanOneChord()
+    {
+        var viewModel = new MainViewModel();
+
+        viewModel.Load(new HotKeyCatalog(
+            [
+                Make("SUPER + B", "Browser", BindOrigin.Default, command: "browser") with { DuplicateCount = 2 },
+                Make("SUPER + RETURN", "Browser", BindOrigin.Default, command: "browser") with { DuplicateCount = 2 },
+                Make("SUPER + Q", "Close", BindOrigin.Default, command: "close"),
+            ],
+            ["hyprland.lua"],
+            []) { HasDefaultsLayer = true });
+
+        Assert.True(viewModel.HasDuplicates);
+
+        viewModel.DuplicatesOnly = true;
+
+        var shown = viewModel.Groups.SelectMany(g => g.HotKeys).ToList();
+        Assert.Equal(2, shown.Count);
+        Assert.All(shown, hotKey => Assert.Equal("Browser", hotKey.Description));
+    }
+
+    [Fact]
+    public void TheDuplicatesToggleIsHiddenWhenNothingIsDuplicated()
+    {
+        // Otherwise the toggle is a button that can only ever empty the list.
+        Assert.False(Loaded().HasDuplicates);
+    }
+
+    [Fact]
+    public void DuplicatesCombineWithTheOriginFilter()
+    {
+        var viewModel = new MainViewModel();
+
+        viewModel.Load(new HotKeyCatalog(
+            [
+                Make("SUPER + B", "Browser", BindOrigin.Default, command: "browser") with { DuplicateCount = 2 },
+                Make("SUPER + I", "Mine", BindOrigin.User, command: "browser") with { DuplicateCount = 2 },
+            ],
+            ["hyprland.lua"],
+            []) { HasDefaultsLayer = true });
+
+        viewModel.DuplicatesOnly = true;
+        viewModel.Filter = FilterMode.Customised;
+
+        Assert.Equal("Mine", viewModel.Groups.SelectMany(g => g.HotKeys).Single().Description);
+    }
+
+    [Fact]
+    public void RowsFlattenHeadingsAndBindingsInOrder()
+    {
+        var rows = Loaded().Rows;
+
+        Assert.IsType<HotKeyGroup>(rows[0]);
+        Assert.Contains(rows, r => r is HotKey);
+        // Every binding in every expanded group, plus one heading per group.
+        Assert.Equal(4 + Loaded().Groups.Count, rows.Count);
+    }
+
+    [Fact]
+    public void CollapsingASectionRemovesItsRowsButKeepsItsHeading()
+    {
+        var viewModel = Loaded();
+        var group = viewModel.Groups.Single(g => g.Name == "Applications");
+        var before = viewModel.Rows.Count;
+
+        viewModel.ToggleGroup(group);
+
+        Assert.Equal(before - group.HotKeys.Count, viewModel.Rows.Count);
+        Assert.Contains(group, viewModel.Rows);
+    }
+
+    [Fact]
+    public void SelectingAHeadingIsNotSelectingABinding()
+    {
+        var viewModel = Loaded();
+        viewModel.SelectedRow = viewModel.Groups[0];
+
+        // Delete and Enter act on bindings only, so this must stay null.
+        Assert.Null(viewModel.SelectedHotKey);
+    }
+
+    [Fact]
+    public void SelectionIsDroppedWhenTheSelectedRowIsFilteredAway()
+    {
+        var viewModel = Loaded();
+        viewModel.SelectedRow = viewModel.Rows.OfType<HotKey>().Single(k => k.Description == "Browser");
+
+        viewModel.Query = "terminal";
+
+        // Otherwise Delete would act on a binding that is no longer on screen.
+        Assert.Null(viewModel.SelectedHotKey);
     }
 
     [Fact]
