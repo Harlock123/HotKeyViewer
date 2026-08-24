@@ -1,0 +1,166 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HotKeyViewer.ViewModels"
+        xmlns:models="using:HotKeyViewer.Models"
+        x:Class="HotKeyViewer.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Hyprland Hotkeys"
+        MinWidth="640" MinHeight="400"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True">
+
+  <Border Background="{DynamicResource SurfaceBrush}"
+          BorderBrush="{DynamicResource SurfaceBorderBrush}"
+          BorderThickness="1"
+          CornerRadius="12">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18,14,18,12">
+
+      <!-- Header -->
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+        <StackPanel Grid.Column="0" Spacing="2">
+          <TextBlock Text="Hyprland Hotkeys"
+                     FontSize="{DynamicResource FontSizeTitle}" FontWeight="Bold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBlock Text="{Binding StatusText}"
+                     FontSize="{DynamicResource FontSizeSmall}"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                    IsVisible="{Binding ShowsOriginFilter}">
+          <RadioButton Classes="chip" GroupName="filter" Content="All"
+                       IsChecked="{Binding IsShowingAll, Mode=OneWay}"
+                       Click="OnFilterAll" />
+          <RadioButton Classes="chip" GroupName="filter" Content="Yours"
+                       IsChecked="{Binding IsShowingCustomised, Mode=OneWay}"
+                       Click="OnFilterCustomised" />
+          <RadioButton Classes="chip" GroupName="filter" Content="Defaults"
+                       IsChecked="{Binding IsShowingDefaults, Mode=OneWay}"
+                       Click="OnFilterDefaults" />
+        </StackPanel>
+      </Grid>
+
+      <!-- Search -->
+      <TextBox Grid.Row="1" Name="SearchBox"
+               Classes="search"
+               PlaceholderText="Search a key, an action, or a command…"
+               Text="{Binding Query, Mode=TwoWay}"
+               Margin="0,0,0,12" />
+
+      <!-- Results -->
+      <Panel Grid.Row="2">
+        <TextBlock Text="Reading configuration…"
+                   IsVisible="{Binding IsLoading}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <TextBlock Text="Nothing matches that search."
+                   IsVisible="{Binding HasNoResults}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <ScrollViewer IsVisible="{Binding IsReady}" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Groups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:HotKeyGroup">
+                <StackPanel Margin="0,0,0,16">
+
+                  <Button Classes="groupToggle" Click="OnToggleGroup" Margin="0,0,0,4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <!-- Two glyphs rather than one rotated by a converter. -->
+                      <Path Classes="chevron"
+                            Data="M 0,0 L 8,0 L 4,5 Z"
+                            Width="{DynamicResource ChevronSize}"
+                            Height="{DynamicResource ChevronSize}"
+                            IsVisible="{Binding IsExpanded}" />
+                      <Path Classes="chevron"
+                            Data="M 0,0 L 5,4 L 0,8 Z"
+                            Width="{DynamicResource ChevronSize}"
+                            Height="{DynamicResource ChevronSize}"
+                            IsVisible="{Binding IsCollapsed}" />
+                      <TextBlock Classes="groupHeader" Text="{Binding Name}" VerticalAlignment="Center" />
+                      <TextBlock Classes="muted" Text="{Binding CountLabel}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+
+                  <ItemsControl ItemsSource="{Binding HotKeys}" IsVisible="{Binding IsExpanded}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="models:HotKey">
+                        <Border Classes="row">
+                          <Grid ColumnDefinitions="Auto,*,Auto">
+
+                            <!-- Keycaps -->
+                            <ItemsControl Grid.Column="0" ItemsSource="{Binding Chord.Parts}"
+                                          Width="{DynamicResource KeycapColumnWidth}"
+                                          VerticalAlignment="Center">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                  <Border Classes="keycap" Margin="0,1,4,1">
+                                    <TextBlock Text="{Binding}" />
+                                  </Border>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Action and command -->
+                            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Description}"
+                                         FontSize="{DynamicResource FontSizeBody}"
+                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding Command}"
+                                         IsVisible="{Binding HasCommand}"
+                                         Classes="muted"
+                                         FontFamily="{StaticResource MonospaceFont}"
+                                         TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <!-- Provenance -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                                        VerticalAlignment="Center">
+                              <Border Classes="badge" IsVisible="{Binding HasBadge}"
+                                      Background="{DynamicResource BadgeBrush}">
+                                <TextBlock Text="{Binding BadgeText}"
+                                           FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                           Foreground="{DynamicResource CustomBrush}" />
+                              </Border>
+                              <TextBlock Text="{Binding SourceLabel}"
+                                         IsVisible="{Binding HasSource}"
+                                         Classes="muted"
+                                         MinWidth="{DynamicResource SourceColumnWidth}"
+                                         TextAlignment="Right" />
+                            </StackPanel>
+
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+
+      <!-- Footer -->
+      <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="10,10,0,0">
+        <TextBlock Grid.Column="0" Classes="muted"
+                   Text="{Binding WarningText}"
+                   IsVisible="{Binding HasWarning}"
+                   TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="1" Classes="muted"
+                   Text="Type to search  ·  Click a heading to collapse  ·  Ctrl+E all  ·  Esc to close  ·  Ctrl+R reload" />
+      </Grid>
+
+    </Grid>
+  </Border>
+</Window>

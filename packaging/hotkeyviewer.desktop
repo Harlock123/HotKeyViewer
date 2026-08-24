@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hyprland Hotkeys
+Comment=Show every hotkey Hyprland currently has bound
+Exec=hotkeyviewer
+Terminal=false
+Categories=Utility;System;
+Keywords=hyprland;keybindings;shortcuts;hotkeys;
+StartupWMClass=hotkeyviewer

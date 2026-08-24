@@ -1,0 +1,153 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <!-- Keycaps read best in a mono face; the list is a fallback chain because
+         none of these are guaranteed to be installed. -->
+    <FontFamily x:Key="MonospaceFont">JetBrains Mono, DejaVu Sans Mono, Liberation Mono, monospace</FontFamily>
+
+    <!-- Design sizes at text scale 1. ScaledResources overrides these in
+         Application.Resources at startup, which takes precedence over a style's
+         own resources, so these are what a scale of 1.0 (or the previewer) uses. -->
+    <x:Double x:Key="FontSizeTitle">19</x:Double>
+    <x:Double x:Key="FontSizeBody">13</x:Double>
+    <x:Double x:Key="FontSizeSearch">13</x:Double>
+    <x:Double x:Key="FontSizeHeader">12</x:Double>
+    <x:Double x:Key="FontSizeChip">12</x:Double>
+    <x:Double x:Key="FontSizeSmall">11</x:Double>
+    <x:Double x:Key="FontSizeKeycap">11</x:Double>
+    <x:Double x:Key="FontSizeBadge">9</x:Double>
+    <x:Double x:Key="SourceColumnWidth">140</x:Double>
+    <x:Double x:Key="ChevronSize">9</x:Double>
+    <GridLength x:Key="KeycapColumn">280</GridLength>
+
+    <!-- Colours are published at startup by ThemeResources, from the active
+         Omarchy theme, and republished whenever the theme changes. They are
+         deliberately absent here so there is a single source for them. -->
+
+  </Styles.Resources>
+
+  <!-- A single key drawn as a physical keycap. -->
+  <Style Selector="Border.keycap">
+    <Setter Property="Background" Value="{DynamicResource KeycapBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KeycapBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="MinWidth" Value="0" />
+  </Style>
+
+  <Style Selector="Border.keycap > TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonospaceFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeKeycap}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+
+  <Style Selector="Border.row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+
+  <Style Selector="Border.badge">
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="6,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.groupToggle">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.groupToggle:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+
+  <Style Selector="Path.chevron">
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.groupHeader">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeHeader}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+  </Style>
+
+  <!-- Filter chips: radio buttons that read as segmented controls. -->
+  <Style Selector="RadioButton.chip">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeChip}" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="chipBorder"
+                Background="{DynamicResource ChipBrush}"
+                CornerRadius="6"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            Foreground="{TemplateBinding Foreground}"
+                            FontSize="{TemplateBinding FontSize}"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton.chip:checked /template/ Border#chipBorder">
+    <Setter Property="Background" Value="{DynamicResource ChipCheckedBrush}" />
+  </Style>
+
+  <Style Selector="RadioButton.chip:pointerover /template/ Border#chipBorder">
+    <Setter Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+  </Style>
+
+  <Style Selector="RadioButton.chip:checked">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- Fluent's TextBox paints its own border element, and its focused state
+       sets a background that beats a plain Background setter, so the themed
+       colour has to be applied to that element in every state. -->
+  <Style Selector="TextBox.search /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.search">
+    <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSearch}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+</Styles>
