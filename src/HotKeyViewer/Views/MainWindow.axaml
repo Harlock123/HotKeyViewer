@@ -21,7 +21,7 @@
       <!-- Header -->
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
         <StackPanel Grid.Column="0" Spacing="2">
-          <TextBlock Text="Hyperland Hotkeys"
+          <TextBlock Text="Hyprland Hotkeys"
                      FontSize="{DynamicResource FontSizeTitle}" FontWeight="Bold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Text="{Binding StatusText}"
