@@ -4,6 +4,16 @@ A .NET 10 desktop app that shows every hotkey Hyprland currently has bound —
 the defaults, anything you added, and anything you remapped — in a floating,
 searchable window.
 
+> **Why this isn't an Omarchy plugin.** An Omarchy plugin is QML loaded into
+> the live `omarchy-shell` process, and `omarchy plugin add` only clones and
+> validates a git repo — it never builds, never runs an install hook, never
+> asks for sudo. A 22 MB AOT binary and its Skia/HarfBuzz libraries cannot be
+> delivered that way. The alternatives were a thin QML wrapper over a
+> separately installed binary, which is a two-step install and so gives up the
+> one thing the plugin system is for, or a full QML rewrite that would discard
+> the C# codebase and its tests. Installing the binary and binding a key is
+> simpler than either, so that is what this does.
+
 ![All bindings, grouped, with your own listed first](docs/screenshot.png)
 
 Each row shows the chord as keycaps, what it does, the command it runs, and the

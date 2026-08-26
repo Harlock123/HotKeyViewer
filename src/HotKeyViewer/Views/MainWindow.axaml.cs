@@ -60,19 +60,22 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 return;
 
-            // Typing filters, then Down walks into the results — arrow keys in
-            // the search box would otherwise just move the caret.
-            case Key.Down when SearchBox.IsFocused:
-                MoveIntoList();
-                e.Handled = true;
-                return;
-
             case Key.E when e.KeyModifiers.HasFlag(KeyModifiers.Control):
                 // Collapse everything only once nothing is left to open, so the
                 // one shortcut reads as "show me less" then "show me more".
                 ViewModel?.SetAllExpanded(ViewModel.Groups.Any(g => !g.IsExpanded));
                 e.Handled = true;
                 return;
+        }
+
+        // Navigation keys belong to whatever has focus. Without this, Down on the
+        // last row — which the list leaves unhandled, having nowhere to move —
+        // would fall through and yank focus back into the search box.
+        if (e.Key is Key.Up or Key.Down or Key.Left or Key.Right
+            or Key.Home or Key.End or Key.PageUp or Key.PageDown or Key.Tab)
+        {
+            base.OnKeyDown(e);
+            return;
         }
 
         // Anything printable typed outside the search box means the user wants
@@ -123,7 +126,24 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnPreviewRowKey(KeyEventArgs e)
     {
-        if (SearchBox.IsFocused || ViewModel is not { } viewModel)
+        if (ViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        // An arrow pressed anywhere outside the list walks into it. This has to
+        // happen on the tunnelling pass for the same reason Enter does: the
+        // search box holds focus when the window opens, and a TextBox consumes
+        // Up and Down to move its caret, so a bubbling handler never saw them.
+        // Until a row had been clicked, the arrow keys did nothing at all.
+        if (e.Key is Key.Up or Key.Down && !RowList.IsKeyboardFocusWithin)
+        {
+            MoveIntoList();
+            e.Handled = true;
+            return;
+        }
+
+        if (SearchBox.IsFocused)
         {
             return;
         }

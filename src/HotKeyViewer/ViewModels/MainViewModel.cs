@@ -164,6 +164,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _duplicatesOnly, value))
             {
+                RaisePropertyChanged(nameof(OriginFilterEnabled));
                 ApplyFilter();
             }
         }
@@ -171,6 +172,13 @@ public sealed class MainViewModel : ViewModelBase
 
     /// <summary>Hidden when nothing is duplicated, so the toggle never dead-ends.</summary>
     public bool HasDuplicates => _allHotKeys.Any(k => k.HasDuplicates);
+
+    /// <summary>
+    /// False while Duplicates is on, because the origin chips do not apply
+    /// then. Greying them out is what keeps that visible -- chips that silently
+    /// stopped working would read as a bug.
+    /// </summary>
+    public bool OriginFilterEnabled => !DuplicatesOnly;
 
     private bool _showsOriginFilter = true;
 
@@ -254,7 +262,12 @@ public sealed class MainViewModel : ViewModelBase
             .ToArray();
 
         var matches = _allHotKeys.Where(hotKey =>
-            MatchesFilter(hotKey) &&
+            // Duplicates deliberately overrides the origin chip instead of
+            // combining with it. An action's second chord is usually a default
+            // when the one in front of you is yours, so narrowing to "Yours"
+            // here would hide the very partner the badge is pointing at -- the
+            // badge would promise a twin that the filter had just removed.
+            (DuplicatesOnly || MatchesFilter(hotKey)) &&
             (!DuplicatesOnly || hotKey.HasDuplicates) &&
             // Every term must appear somewhere, so "super work" narrows rather
             // than widens.

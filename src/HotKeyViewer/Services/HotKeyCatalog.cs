@@ -222,25 +222,64 @@ public static class HotKeyCatalogBuilder
     /// </summary>
     private static void MarkDuplicates(List<HotKey> hotKeys)
     {
-        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var chordsByCommand = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var hotKey in hotKeys)
         {
-            if (IsIdentifying(hotKey.Command))
+            if (!IsIdentifying(hotKey.Command))
             {
-                counts[hotKey.Command] = counts.GetValueOrDefault(hotKey.Command) + 1;
+                continue;
             }
+
+            if (!chordsByCommand.TryGetValue(hotKey.Command, out var chords))
+            {
+                chordsByCommand[hotKey.Command] = chords = [];
+            }
+
+            chords.Add(hotKey.Chord.Display);
         }
 
         for (var index = 0; index < hotKeys.Count; index++)
         {
-            if (IsIdentifying(hotKeys[index].Command) &&
-                counts.TryGetValue(hotKeys[index].Command, out var count) &&
-                count > 1)
+            var hotKey = hotKeys[index];
+
+            if (!IsIdentifying(hotKey.Command) ||
+                !chordsByCommand.TryGetValue(hotKey.Command, out var chords) ||
+                chords.Count <= 1)
             {
-                hotKeys[index] = hotKeys[index] with { DuplicateCount = count };
+                continue;
             }
+
+            hotKeys[index] = hotKey with
+            {
+                DuplicateCount = chords.Count,
+                PartnerChords = PartnersOf(chords, hotKey.Chord.Display),
+            };
         }
+    }
+
+    /// <summary>
+    /// Every chord bar this row's own. Drops one occurrence rather than all
+    /// matching ones: two bindings can genuinely share a chord, and filtering
+    /// every copy out would hide precisely the collision worth seeing.
+    /// </summary>
+    private static List<string> PartnersOf(List<string> chords, string own)
+    {
+        var partners = new List<string>(chords.Count - 1);
+        var dropped = false;
+
+        foreach (var chord in chords)
+        {
+            if (!dropped && string.Equals(chord, own, StringComparison.OrdinalIgnoreCase))
+            {
+                dropped = true;
+                continue;
+            }
+
+            partners.Add(chord);
+        }
+
+        return partners;
     }
 
     /// <summary>

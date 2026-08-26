@@ -32,6 +32,38 @@ public class DuplicateDetectionTests
     }
 
     [Fact]
+    public void PartnerChordsNameTheOtherKeyRatherThanJustCountingIt()
+    {
+        // Counting alone sends you hunting for another B, when the partner is
+        // on RETURN. Each row names the chord it is paired with.
+        var hotKeys = Build(
+            Bind(65, "B", "Browser", "exec", "omarchy-launch-browser") +
+            Bind(65, "RETURN", "Browser", "exec", "omarchy-launch-browser"));
+
+        var onB = hotKeys.Single(k => k.Chord.Key == "B");
+        var onReturn = hotKeys.Single(k => k.Chord.Key == "RETURN");
+
+        Assert.Equal(["SUPER + SHIFT + RETURN"], onB.PartnerChords);
+        Assert.Equal(["SUPER + SHIFT + B"], onReturn.PartnerChords);
+        Assert.Equal("Also bound to SUPER + SHIFT + RETURN", onB.DuplicateTooltip);
+    }
+
+    [Fact]
+    public void ARowNeverListsItselfAsItsOwnPartner()
+    {
+        var hotKeys = Build(
+            Bind(64, "F1", "Thing", "exec", "thing") +
+            Bind(64, "F2", "Thing", "exec", "thing") +
+            Bind(64, "F3", "Thing", "exec", "thing"));
+
+        var first = hotKeys.Single(k => k.Chord.Key == "F1");
+
+        Assert.Equal(3, first.DuplicateCount);
+        Assert.Equal(["SUPER + F2", "SUPER + F3"], first.PartnerChords);
+        Assert.DoesNotContain("SUPER + F1", first.PartnerChords);
+    }
+
+    [Fact]
     public void ADifferentArgumentIsNotADuplicate()
     {
         // Private browsing runs the same binary with a different flag, so it is

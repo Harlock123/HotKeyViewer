@@ -30,7 +30,9 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                    IsVisible="{Binding ShowsOriginFilter}">
+                    IsVisible="{Binding ShowsOriginFilter}"
+                    IsEnabled="{Binding OriginFilterEnabled}"
+                    ToolTip.Tip="Origin does not apply while Duplicates is on, so no partner chord can be filtered out of view">
           <RadioButton Classes="chip" GroupName="filter" Content="All"
                        IsChecked="{Binding IsShowingAll, Mode=OneWay}"
                        Click="OnFilterAll" />
@@ -45,6 +47,7 @@
         <CheckBox Grid.Column="2" Classes="chipToggle" Content="Duplicates"
                   Margin="6,0,0,0" VerticalAlignment="Center"
                   IsVisible="{Binding HasDuplicates}"
+                  ToolTip.Tip="Show every action reachable by more than one chord, across both yours and the defaults"
                   IsChecked="{Binding DuplicatesOnly, Mode=TwoWay}" />
       </Grid>
 
@@ -139,7 +142,7 @@
                               VerticalAlignment="Center">
                     <Border Classes="badge" IsVisible="{Binding HasDuplicates}"
                             Background="{DynamicResource BadgeBrush}"
-                            ToolTip.Tip="Another chord runs this same command">
+                            ToolTip.Tip="{Binding DuplicateTooltip}">
                       <TextBlock Text="{Binding DuplicateLabel}"
                                  FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
                                  Foreground="{DynamicResource RemapBrush}" />

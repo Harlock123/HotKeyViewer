@@ -242,8 +242,12 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void DuplicatesCombineWithTheOriginFilter()
+    public void DuplicatesOverridesTheOriginFilterSoNoPartnerIsHidden()
     {
+        // The whole point of the badge is to lead you to the other chord, and
+        // that partner is usually a default when the row you clicked from is
+        // your own. Honouring "Yours" here would show one half of a pair while
+        // still badging it "2 KEYS" -- the exact dead end this replaced.
         var viewModel = new MainViewModel();
 
         viewModel.Load(new HotKeyCatalog(
@@ -256,6 +260,43 @@ public class MainViewModelTests
 
         viewModel.DuplicatesOnly = true;
         viewModel.Filter = FilterMode.Customised;
+
+        var shown = viewModel.Groups.SelectMany(g => g.HotKeys).Select(k => k.Description).ToList();
+        Assert.Equal(2, shown.Count);
+        Assert.Contains("Mine", shown);
+        Assert.Contains("Browser", shown);
+    }
+
+    [Fact]
+    public void TheOriginChipsGoInertWhileDuplicatesIsOn()
+    {
+        var viewModel = new MainViewModel();
+        Assert.True(viewModel.OriginFilterEnabled);
+
+        viewModel.DuplicatesOnly = true;
+        Assert.False(viewModel.OriginFilterEnabled);
+
+        viewModel.DuplicatesOnly = false;
+        Assert.True(viewModel.OriginFilterEnabled);
+    }
+
+    [Fact]
+    public void SearchStillNarrowsInsideDuplicates()
+    {
+        // Origin is overridden; an explicit search is not. Typing is a direct
+        // request to see less, so it keeps working.
+        var viewModel = new MainViewModel();
+
+        viewModel.Load(new HotKeyCatalog(
+            [
+                Make("SUPER + B", "Browser", BindOrigin.Default, command: "browser") with { DuplicateCount = 2 },
+                Make("SUPER + I", "Mine", BindOrigin.User, command: "browser") with { DuplicateCount = 2 },
+            ],
+            ["hyprland.lua"],
+            []) { HasDefaultsLayer = true });
+
+        viewModel.DuplicatesOnly = true;
+        viewModel.Query = "mine";
 
         Assert.Equal("Mine", viewModel.Groups.SelectMany(g => g.HotKeys).Single().Description);
     }

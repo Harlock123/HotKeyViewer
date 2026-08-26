@@ -100,7 +100,24 @@ public sealed record HotKey
 
     public bool HasDuplicates => DuplicateCount > 1;
 
+    /// <summary>
+    /// The other chords running this same command, already in display form.
+    /// Empty unless <see cref="HasDuplicates"/>. Naming them is what turns the
+    /// badge from a claim into something findable: the partner is regularly on
+    /// an unrelated key (Omarchy reaches the browser from both SUPER+SHIFT+B
+    /// and SUPER+SHIFT+RETURN), so "look for the same key again" never finds it.
+    /// </summary>
+    public IReadOnlyList<string> PartnerChords { get; init; } = [];
+
     public string DuplicateLabel => $"{DuplicateCount} KEYS";
+
+    /// <summary>
+    /// Badge tooltip. Falls back to the old wording when the partners are not
+    /// known, so a row is never left with an empty tip.
+    /// </summary>
+    public string DuplicateTooltip => PartnerChords.Count == 0
+        ? "Another chord runs this same command"
+        : $"Also bound to {string.Join(", ", PartnerChords)}";
 
     /// <summary>
     /// True when the defining file belongs to the distribution, where edits are
